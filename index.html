@@ -1196,6 +1196,38 @@ async function ensureMyIdeasLoaded(){
   if(state.myIdeasLoaded) return;
   state.myIdeasLoaded = true;
   try{ const r = await window.storage.get("ai:my-ideas", false); if(r && r.value) state.myIdeas = JSON.parse(r.value); }catch(e){}
+
+  // One-time Yond opportunity seed: added from the daily investment watch.
+  // The marker prevents the idea from being recreated if the user deletes it later.
+  const seedKey = "seed:yond-opportunity:agro-cold-solar-v1";
+  try{
+    let seeded = false;
+    try{
+      const marker = await window.storage.get(seedKey, false);
+      seeded = !!(marker && marker.value);
+    }catch(e){}
+
+    if(!seeded){
+      const seedId = "yond-agro-cold-solar-v1";
+      const alreadyExists = state.myIdeas.some(i => i.id===seedId || (i.titre||"").toLowerCase().includes("chaîne du froid solaire"));
+      if(!alreadyExists){
+        state.myIdeas.unshift({
+          id: seedId,
+          titre: "Micro-unités de transformation agroalimentaire + chaîne du froid solaire",
+          secteur: "Agriculture / Agroalimentaire",
+          statut: "À étudier",
+          description: "Équiper des zones agricoles au Sénégal de petites unités modulaires plutôt que de construire immédiatement une grosse usine. Parcours cible : Producteur → collecte → transformation → stockage froid solaire → conditionnement → Dakar / export. L’objectif est de réduire les pertes post-récolte, créer davantage de valeur localement et tester le modèle progressivement avant un déploiement à plus grande échelle.",
+          evaluation: null,
+          source: "Opportunité Yond issue du brief quotidien",
+          date: "2026-10-01T00:00:00.000Z"
+        });
+        await window.storage.set("ai:my-ideas", JSON.stringify(state.myIdeas), false);
+      }
+      await window.storage.set(seedKey, "1", false);
+    }
+  }catch(e){
+    // Non-blocking: Yond remains usable even if this optional seed cannot be persisted.
+  }
   render();
 }
 let myIdeasSaveTimer=null;
@@ -1948,7 +1980,7 @@ function renderMyIdeasSection(){
     return `
     <div class="idea-sugg-card">
       <div class="idea-sugg-head" style="background:#579DFF26;display:flex;align-items:flex-start;justify-content:space-between;">
-        <div><span class="dom" style="color:#579DFF;">📝 Mon idée</span><p class="idea-sugg-title">${escapeHtml(idea.titre||"Sans titre")}</p></div>
+        <div><span class="dom" style="color:#579DFF;">${idea.statut==="À étudier" ? "💡 À étudier" + (idea.secteur ? " · " + escapeHtml(idea.secteur) : "") : "📝 Mon idée"}</span><p class="idea-sugg-title">${escapeHtml(idea.titre||"Sans titre")}</p></div>
         <button type="button" class="row-btn" style="color:#7A869A;" data-action="del-my-idea" data-id="${idea.id}">${iconX()}</button>
       </div>
       <div class="idea-sugg-body">
